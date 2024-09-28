@@ -133,6 +133,7 @@ partial class Main
         Icon = (Icon)resources.GetObject("$this.Icon");
         MinimumSize = new Size(1098, 645);
         Name = "Main";
+        StartPosition = FormStartPosition.CenterScreen;
         Text = "Generate Nuget Packages";
         Load += Main_Load;
         ResumeLayout(false);
