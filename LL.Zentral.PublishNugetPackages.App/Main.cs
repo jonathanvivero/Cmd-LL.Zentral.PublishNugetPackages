@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LL.Zentral.PublishNugetPackages.Common;
 
 namespace LL.Zentral.PublishNugetPackages.App;
@@ -56,7 +57,14 @@ public partial class Main : Form
     private async void BtnPublish_Click(object sender, EventArgs e)
     {
         if (chkLstAvalilableProjects.CheckedItems is null || chkLstAvalilableProjects.CheckedItems.Count == 0)
+        {
+            MessageBox.Show($"No Project/s selected!!");
             return;
+        }
+
+        lstResults.Items.Clear();       
+
+        btnPublish.Enabled = false;
 
         List<string> availablePackages = [];
         
@@ -66,17 +74,22 @@ public partial class Main : Form
         { 
             var selectedProject = (DirectoryInfo)item!;
 
-            await PackagesHelper.GenerateNugetPackagesForUniqueProjectAsync(selectedProject);
+            await PackagesHelper.GenerateNugetPackagesForUniqueProjectAsync(selectedProject, LogOperation);
 
             availablePackages = PackagesHelper.FindAvailablePackages(selectedProject, availablePackages);            
         }
 
-        PackagesHelper.PublishPackagesToNugetRepo(availablePackages);
-
-        foreach(var package in availablePackages)
-            lstResults.Items.Add(package);
+        await PackagesHelper.PublishPackagesToNugetRepo(availablePackages, LogOperation);
+        
+        btnPublish.Enabled = true;
 
         MessageBox.Show($"Process Finished. {availablePackages.Count} Nuget packages published.");
-
     }
+
+    private void LogOperation(string log)
+    { 
+        lstResults.Items.Add(log);
+        Console.WriteLine(log);
+        Debug.Print(log);
+    } 
 }

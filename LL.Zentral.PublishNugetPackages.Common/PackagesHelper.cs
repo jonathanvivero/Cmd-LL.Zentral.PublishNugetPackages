@@ -19,7 +19,7 @@ public static class PackagesHelper
             await GenerateNugetPackagesForUniqueProjectAsync(project);
     }
 
-    public static async Task GenerateNugetPackagesForUniqueProjectAsync(DirectoryInfo projectDir)
+    public static async Task GenerateNugetPackagesForUniqueProjectAsync(DirectoryInfo projectDir, Action<string>? logger = null)
     {
         var proc = new Process
         {
@@ -36,6 +36,7 @@ public static class PackagesHelper
 
         proc.Start();
         await proc.WaitForExitAsync();
+        if(logger is not null) logger($"Generate package for: {projectDir.Name}");
     }
 
     public static List<string> FindAvailablePackages(DirectoryInfo projectDirs, List<string>? availablePackages = null)
@@ -59,7 +60,7 @@ public static class PackagesHelper
         return availablePackages;
     }
 
-    public static void PublishPackagesToNugetRepo(List<string> availablePackages)
+    public static async Task PublishPackagesToNugetRepo(List<string> availablePackages, Action<string>? logger = null)
     {
         foreach (var package in availablePackages)
         {
@@ -77,7 +78,8 @@ public static class PackagesHelper
             };
 
             proc.Start();
-            proc.WaitForExit();
+            await proc.WaitForExitAsync();
+            if (logger is not null) logger($"Package moved to Nuget repo => {package}");
         }
     }
 }
