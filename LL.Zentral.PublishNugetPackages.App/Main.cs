@@ -74,14 +74,27 @@ public partial class Main : Form
         { 
             var selectedProject = (DirectoryInfo)item!;
 
-            await PackagesHelper.GenerateNugetPackagesForUniqueProjectAsync(selectedProject, LogOperation);
+            var generateResult = await PackagesHelper.GenerateNugetPackagesForUniqueProjectAsync(selectedProject, LogOperation);
+
+            if (!generateResult.Success)
+            { 
+                lstResults.Items.Add(generateResult.Message);
+                MessageBox.Show($"Process Finished with errors.");
+                return;
+            }
 
             availablePackages = PackagesHelper.FindAvailablePackages(selectedProject, availablePackages);            
         }
 
-        await PackagesHelper.PublishPackagesToNugetRepo(availablePackages, LogOperation);
-        
+        var publishResult = await PackagesHelper.PublishPackagesToNugetRepo(availablePackages, LogOperation);
         btnPublish.Enabled = true;
+        
+        if (!publishResult.Success)
+        {
+            lstResults.Items.Add(publishResult.Message);
+            MessageBox.Show($"Process Finished with errors.");
+            return;
+        }
 
         MessageBox.Show($"Process Finished. {availablePackages.Count} Nuget packages published.");
     }

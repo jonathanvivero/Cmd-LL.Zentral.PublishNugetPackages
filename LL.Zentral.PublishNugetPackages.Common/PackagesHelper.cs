@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace LL.Zentral.PublishNugetPackages.Common;
 
@@ -19,24 +20,35 @@ public static class PackagesHelper
             await GenerateNugetPackagesForUniqueProjectAsync(project);
     }
 
-    public static async Task GenerateNugetPackagesForUniqueProjectAsync(DirectoryInfo projectDir, Action<string>? logger = null)
+    public static async Task<OperationResult> GenerateNugetPackagesForUniqueProjectAsync(DirectoryInfo projectDir, Action<string>? logger = null)
     {
-        var proc = new Process
+        var msg = $"Generate package for: {projectDir.Name}";
+        try
         {
-            StartInfo = new ProcessStartInfo
+            var proc = new Process
             {
-                FileName = @"dotnet",
-                Arguments = "pack -c Release",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                WorkingDirectory = @$"{projectDir.FullName}"
-            }
-        };
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = @"dotnet",
+                    Arguments = "pack -c Release",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = @$"{projectDir.FullName}"
+                }
+            };
 
-        proc.Start();
-        await proc.WaitForExitAsync();
-        if(logger is not null) logger($"Generate package for: {projectDir.Name}");
+            proc.Start();
+            await proc.WaitForExitAsync();
+            if (logger is not null) logger(msg);
+
+            return new(Message:msg);
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"ERROR: {msg} => {ex.Message}");
+        }
+
     }
 
     public static List<string> FindAvailablePackages(DirectoryInfo projectDirs, List<string>? availablePackages = null)
@@ -60,26 +72,39 @@ public static class PackagesHelper
         return availablePackages;
     }
 
-    public static async Task PublishPackagesToNugetRepo(List<string> availablePackages, Action<string>? logger = null)
+    public static async Task<OperationResult> PublishPackagesToNugetRepo(List<string> availablePackages, Action<string>? logger = null)
     {
-        foreach (var package in availablePackages)
+        StringBuilder msgList = new();
+        try
         {
-            var proc = new Process
+            foreach (var package in availablePackages)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = @"dotnet",
-                    Arguments = $"nuget push {package} -s {DirectoryHelper.RepoDir.FullName}",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = @$"{DirectoryHelper.ProjectsDir.FullName}"
-                }
-            };
+                var msg = $"Package moved to Nuget repo => {package}";
+                msgList.AppendLine(msg);
 
-            proc.Start();
-            await proc.WaitForExitAsync();
-            if (logger is not null) logger($"Package moved to Nuget repo => {package}");
+                var proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = @"dotnet",
+                        Arguments = $"nuget push {package} -s {DirectoryHelper.RepoDir.FullName}",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = @$"{DirectoryHelper.ProjectsDir.FullName}"
+                    }
+                };
+
+                proc.Start();
+                await proc.WaitForExitAsync();
+                if (logger is not null) logger(msg);
+            }
+
+            return new(Message: msgList.ToString());
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"ERROR: Moving {availablePackages.Count} packages to Nuget Repo ({msgList.Length} moved) => {ex.Message}");
         }
     }
 }
